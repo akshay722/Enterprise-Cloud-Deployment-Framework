@@ -1,0 +1,89 @@
+trigger:
+  - main
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        pool:
+          vmImage: "ubuntu-latest" # Corrected typo from 'ubantu-latest'
+
+        steps:
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: "1.7.0"
+
+          - script: |
+              pwd
+              ls -la
+              echo "Listing repository contents:"
+              ls -R $(Build.SourcesDirectory)
+            displayName: "Debug - List Repository Contents"
+
+          - script: |
+              mkdir -p $(System.DefaultWorkingDirectory)/terraform
+              cp $(Build.SourcesDirectory)/IaC/iBlocks/ABS.tf $(System.DefaultWorkingDirectory)/terraform/
+              ls -la $(System.DefaultWorkingDirectory)/terraform
+            displayName: "Setup Terraform Directory"
+
+          - script: |
+              echo "Content of terraform directory:"
+              ls -la $(System.DefaultWorkingDirectory)/terraform
+              echo "Content of ABS.tf:"
+              cat $(System.DefaultWorkingDirectory)/terraform/ABS.tf
+            displayName: "Debug - Show Terraform Files"
+
+          - task: TerraformTaskV4@4
+            displayName: Tf init
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              backendServiceArm: "Capstone(SUB_ID)"
+              backendAzureRmResourceGroupName: "rg-abs"
+              backendAzureRmStorageAccountName: "saabs"
+              backendAzureRmContainerName: "container-abs"
+              backendAzureRmKey: "ABS.tf"
+
+          - task: TerraformTaskV4@4
+            displayName: Tf validate
+            inputs:
+              provider: "azurerm"
+              command: "validate"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+
+          - task: TerraformTaskV4@4
+            displayName: Tf fmt
+            inputs:
+              provider: "azurerm"
+              command: "custom"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              outputTo: "console"
+              customCommand: "fmt"
+              environmentServiceNameAzureRM: "Capstone(SUB_ID)"
+
+          - task: TerraformTaskV4@4
+            displayName: Tf plan
+            inputs:
+              provider: "azurerm"
+              command: "plan"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              commandOptions: "-out $(Build.SourcesDirectory)/tfplanfile"
+              environmentServiceNameAzureRM: "Capstone(SUB_ID)"
+
+          - task: ArchiveFiles@2
+            displayName: Archive files
+            inputs:
+              rootFolderOrFile: "$(Build.BinariesDirectory)"
+              includeRootFolder: true
+              archiveType: "zip"
+              archiveFile: "$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip"
+              replaceExistingArchive: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish build artifacts
+            inputs:
+              PathtoPublish: "$(Build.ArtifactStagingDirectory)"
+              ArtifactName: "$(Build.BuildId)-build"
+              publishLocation: "Container"

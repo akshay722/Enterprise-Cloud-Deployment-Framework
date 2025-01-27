@@ -1,0 +1,123 @@
+variable "resource_group_name" {
+  type        = string
+  description = "RG name in Azure"
+}
+variable "location" {
+  type        = string
+  description = "Resources location in Azure"
+}
+variable "cluster_name" {
+  type        = string
+  description = "AKS name in Azure"
+}
+variable "kubernetes_version" {
+  type        = string
+  description = "Kubernetes version"
+}
+variable "system_node_count" {
+  type        = number
+  description = "Number of AKS worker nodes"
+}
+variable "acr_name" {
+  type        = string
+  description = "ACR name"
+}
+
+
+
+# System Node Pool Variables
+variable "system_node_vm_size" {
+  type        = string
+  description = "The VM size for the system node pool"
+}
+
+variable "system_node_min_count" {
+  type        = number
+  description = "Minimum number of nodes in the system node pool"
+}
+
+variable "system_node_max_count" {
+  type        = number
+  description = "Maximum number of nodes in the system node pool"
+}
+
+# Spot Node Pool Variables
+variable "spot_node_vm_size" {
+  type        = string
+  description = "The VM size for the spot node pool"
+}
+
+variable "spot_node_min_count" {
+  type        = number
+  description = "Minimum number of nodes in the spot node pool"
+}
+
+variable "spot_node_max_count" {
+  type        = number
+  description = "Maximum number of nodes in the spot node pool"
+}
+
+variable "spot_eviction_policy" {
+  type        = string
+  description = "Eviction policy for spot instances"
+}
+
+variable "system_node_pool_name" {
+  type        = string
+  description = "Name of the system node pool"
+}
+
+variable "spot_node_pool_name" {
+  type        = string
+  description = "Name of the spot node pool"
+}
+
+
+
+
+# Monitoring and Log Analytics Variables
+variable "log_analytics_workspace_name" {
+  type        = string
+  description = "Name of the Log Analytics workspace for AKS monitoring"
+}
+
+variable "log_analytics_workspace_sku" {
+  type        = string
+  description = "SKU for Log Analytics workspace"
+}
+
+# Tag Variables
+variable "tags" {
+  type        = map(string)
+  description = "Map of tags to assign to resources"
+}
+
+#---------------------------UPDATES---------------------------------
+#trying to implement AD intergration 
+variable "aad_server_app_id" {
+  type        = string
+  description = "Azure AD Server Application ID"
+}
+
+variable "aad_server_app_secret" {
+  type        = string
+  description = "Azure AD Server Application Secret"
+}
+
+variable "aad_client_app_id" {
+  type        = string
+  description = "Azure AD Client Application ID"
+}
+
+variable "aad_tenant_id" {
+  type        = string
+  description = "Azure AD Tenant ID"
+}
+
+variable "admin_group_object_ids" {
+  type        = list(string)
+  description = "List of Azure AD group object IDs for AKS cluster admin access"
+  default     = []  #ENTER ADMIN IDS HERE
+}
+
+

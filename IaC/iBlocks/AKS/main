@@ -1,0 +1,93 @@
+# Define the Resource Group
+resource "azurerm_resource_group" "aks_rg" {
+  name     = var.resource_group_name
+  location = var.location
+  
+    # Add tags to comply with Azure Policy requirements
+  tags = {
+    CostCenter = "YourCostCenterValue"  # Replace with the correct value as per your policy
+  }
+}
+
+# **ADDED: Log Analytics Workspace**
+resource "azurerm_log_analytics_workspace" "log_analytics" {
+  name                = var.log_analytics_workspace_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.aks_rg.name
+  sku                 = var.log_analytics_workspace_sku
+  tags                = var.tags
+}
+
+# Define Azure Container Registry (ACR)
+resource "azurerm_container_registry" "acr" {
+  name                = var.acr_name
+  resource_group_name = azurerm_resource_group.aks_rg.name
+  location            = var.location
+  sku                 = "Standard"
+  admin_enabled       = false
+}
+
+# Assign "AcrPull" Role to AKS Cluster Identity for ACR Access
+resource "azurerm_role_assignment" "acr_pull_role" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+}
+
+# Define the Main AKS Cluster with System Node Pool
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = var.cluster_name
+  kubernetes_version  = var.kubernetes_version
+  location            = var.location
+  resource_group_name = azurerm_resource_group.aks_rg.name
+  dns_prefix          = var.cluster_name
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  default_node_pool {
+    enable_auto_scaling = true
+    name                = var.system_node_pool_name
+    vm_size             = var.system_node_vm_size
+    min_count           = var.system_node_min_count
+    max_count           = var.system_node_max_count
+    zones               = ["1", "2", "3"]
+  }
+
+#Azure Policy Enabled
+  azure_policy_enabled = true
+
+#AAD integration -
+  role_based_access_control_enabled = true
+
+  azure_active_directory_role_based_access_control {
+    managed                = true
+    tenant_id              = var.aad_tenant_id
+    admin_group_object_ids = var.admin_group_object_ids
+}
+
+
+  network_profile {
+   network_plugin    = "azure"
+   load_balancer_sku = "standard"
+   outbound_type = "loadBalancer"
+
+  }
+
+  tags = var.tags
+}
+
+
+# Separate Spot Node Pool Resource
+resource "azurerm_kubernetes_cluster_node_pool" "spot_node_pool" {
+  name                  = var.spot_node_pool_name
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
+  vm_size               = var.spot_node_vm_size
+  priority              = "Spot"
+  enable_auto_scaling   = true
+  min_count             = var.spot_node_min_count
+  max_count             = var.spot_node_max_count
+  eviction_policy       = var.spot_eviction_policy
+  mode                  = "User"
+}
